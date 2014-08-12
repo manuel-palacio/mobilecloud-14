@@ -58,27 +58,27 @@ public class VideoFileService {
         }
 
         @RequestMapping(value = "video/{id}/data", method = POST)
-        public ResponseEntity<VideoStatus> addVideoData(@RequestParam("data") MultipartFile multipartFile,
-                                                        @PathVariable("id") long id) throws IOException {
+        public VideoStatus addVideoData(@RequestParam("data") MultipartFile multipartFile,
+                                                        @PathVariable("id") Long id) throws IOException {
 
             Video video = videos.get(id);
 
             if (video == null) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                throw new VideoNotFoundException(id);
             }
 
             VideoFileManager videoFileManager = VideoFileManager.get();
 
             videoFileManager.saveVideoData(video, multipartFile.getInputStream());
 
-            return new ResponseEntity<>(new VideoStatus(VideoStatus.VideoState.READY), HttpStatus.OK);
+            return new VideoStatus(VideoStatus.VideoState.READY);
         }
 
         @RequestMapping(value = "video/{id}/data", method = GET)
         public void getVideoData(@PathVariable("id") Long id, HttpServletResponse response) throws IOException {
             Video video = videos.get(id);
             if (video == null) {
-                response.sendError(404);
+                throw new VideoNotFoundException(id);
             } else {
                 VideoFileManager videoFileManager = VideoFileManager.get();
 
@@ -87,7 +87,7 @@ public class VideoFileService {
                     response.setContentType("video/mp4");
                     response.flushBuffer();
                 } catch (FileNotFoundException e) {
-                    response.sendError(404);
+                    throw new VideoNotFoundException(id);
                 }
             }
         }
