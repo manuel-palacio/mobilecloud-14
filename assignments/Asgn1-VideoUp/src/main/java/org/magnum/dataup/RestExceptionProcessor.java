@@ -19,7 +19,7 @@ public class RestExceptionProcessor {
     private MessageSource messageSource;
 
     @ExceptionHandler(VideoNotFoundException.class)
-    @ResponseStatus(value= HttpStatus.NOT_FOUND)
+    @ResponseStatus(value = HttpStatus.NOT_FOUND)
     @ResponseBody
     public ErrorInfo videoNotFound(HttpServletRequest req, VideoNotFoundException ex) {
         Locale locale = LocaleContextHolder.getLocale();

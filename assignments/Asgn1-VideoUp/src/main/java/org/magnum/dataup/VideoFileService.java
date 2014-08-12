@@ -42,70 +42,73 @@ public class VideoFileService {
 
     private static final AtomicLong currentId = new AtomicLong(0L);
 
-        private Map<Long, Video> videos = new ConcurrentHashMap<>();
+    private Map<Long, Video> videos = new ConcurrentHashMap<>();
 
 
-        @RequestMapping(value = "/video", method = POST)
-        public ResponseEntity<Video> addVideo(@RequestBody Video video, UriComponentsBuilder uriBuilder) {
+    @RequestMapping(value = "/video", method = POST)
+    public ResponseEntity<Video> addVideo(@RequestBody Video video, UriComponentsBuilder uriBuilder) {
 
-            save(video);
+        save(video);
 
-            String uriString = uriBuilder.path("/video/{id}/data").buildAndExpand(video.getId()).toUriString();
+        String uriString = uriBuilder.path("/video/{id}/data").buildAndExpand(video.getId()).toUriString();
 
-            video.setDataUrl(uriString);
+        video.setDataUrl(uriString);
 
-            return new ResponseEntity<>(video, HttpStatus.CREATED);
+        return new ResponseEntity<>(video, HttpStatus.CREATED);
+    }
+
+    @RequestMapping(value = "video/{id}/data", method = POST)
+    public VideoStatus addVideoData(@RequestParam("data") MultipartFile multipartFile,
+                                    @PathVariable("id") Long id) throws IOException {
+
+        if (!videos.containsKey(id)) {
+            throw new VideoNotFoundException(id);
         }
 
-        @RequestMapping(value = "video/{id}/data", method = POST)
-        public VideoStatus addVideoData(@RequestParam("data") MultipartFile multipartFile,
-                                                        @PathVariable("id") Long id) throws IOException {
 
-            Video video = videos.get(id);
+        Video video = videos.get(id);
 
-            if (video == null) {
-                throw new VideoNotFoundException(id);
-            }
 
-            VideoFileManager videoFileManager = VideoFileManager.get();
+        VideoFileManager videoFileManager = VideoFileManager.get();
 
-            videoFileManager.saveVideoData(video, multipartFile.getInputStream());
+        videoFileManager.saveVideoData(video, multipartFile.getInputStream());
 
-            return new VideoStatus(VideoStatus.VideoState.READY);
+        return new VideoStatus(VideoStatus.VideoState.READY);
+    }
+
+    @RequestMapping(value = "video/{id}/data", method = GET)
+    public void getVideoData(@PathVariable("id") Long id, HttpServletResponse response) throws IOException {
+
+        if (!videos.containsKey(id)) {
+            throw new VideoNotFoundException(id);
         }
 
-        @RequestMapping(value = "video/{id}/data", method = GET)
-        public void getVideoData(@PathVariable("id") Long id, HttpServletResponse response) throws IOException {
-            Video video = videos.get(id);
-            if (video == null) {
-                throw new VideoNotFoundException(id);
-            } else {
-                VideoFileManager videoFileManager = VideoFileManager.get();
+        Video video = videos.get(id);
+        VideoFileManager videoFileManager = VideoFileManager.get();
 
-                try {
-                    videoFileManager.copyVideoData(video, response.getOutputStream());
-                    response.setContentType("video/mp4");
-                    response.flushBuffer();
-                } catch (FileNotFoundException e) {
-                    throw new VideoNotFoundException(id);
-                }
-            }
+        try {
+            videoFileManager.copyVideoData(video, response.getOutputStream());
+            response.setContentType("video/mp4");
+            response.flushBuffer();
+        } catch (FileNotFoundException e) {
+            throw new VideoNotFoundException(id);
         }
+    }
 
-        @RequestMapping(value = "/video", method = GET)
-        public List<Video> getVideos() {
-            return videos.entrySet().stream().map(Map.Entry::getValue).collect(Collectors.toList());
-        }
+    @RequestMapping(value = "/video", method = GET)
+    public List<Video> getVideos() {
+        return videos.entrySet().stream().map(Map.Entry::getValue).collect(Collectors.toList());
+    }
 
-        public Video save(Video entity) {
-            checkAndSetId(entity);
-            videos.put(entity.getId(), entity);
-            return entity;
-        }
+    public Video save(Video entity) {
+        checkAndSetId(entity);
+        videos.put(entity.getId(), entity);
+        return entity;
+    }
 
-        private void checkAndSetId(Video entity) {
-            if (entity.getId() == 0) {
-                entity.setId(currentId.incrementAndGet());
-            }
+    private void checkAndSetId(Video entity) {
+        if (entity.getId() == 0) {
+            entity.setId(currentId.incrementAndGet());
         }
+    }
 }
